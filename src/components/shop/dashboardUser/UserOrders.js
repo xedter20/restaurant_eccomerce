@@ -1,8 +1,8 @@
-import React, { Fragment, useEffect, useContext } from "react";
-import moment from "moment";
-import { fetchOrderByUser } from "./Action";
-import Layout, { DashboardUserContext } from "./Layout";
-
+import React, { Fragment, useEffect, useContext } from 'react';
+import moment from 'moment';
+import { fetchOrderByUser } from './Action';
+import Layout, { DashboardUserContext } from './Layout';
+import easyinvoice from 'easyinvoice';
 const apiURL = process.env.REACT_APP_API_URL;
 
 const TableHeader = () => {
@@ -18,6 +18,7 @@ const TableHeader = () => {
           <th className="px-4 py-2 border">Transaction Id</th>
           <th className="px-4 py-2 border">Checkout</th>
           <th className="px-4 py-2 border">Processing</th>
+          <th className="px-4 py-2 border">Action(s)</th>
         </tr>
       </thead>
     </Fragment>
@@ -25,6 +26,91 @@ const TableHeader = () => {
 };
 
 const TableBody = ({ order }) => {
+  console.log({ order });
+  const getSampleData = () => {
+    const data = order.allProduct.map(p => {
+      return {
+        description: p.id.pName,
+        quantity: p.quantitiy,
+        'tax-rate': 0,
+        price: p.id.pPrice
+      };
+    });
+
+    return {
+      // "customize": {
+      //     "template": "SGVsbG8gd29ybGQh" // Must be base64 encoded html. This example contains 'Hello World!' in base64
+      // },
+      images: {
+        // logo: 'https://public.easyinvoice.cloud/img/logo_en_original.png',
+        // background: 'https://public.easyinvoice.cloud/img/watermark-draft.jpg'
+      },
+      sender: {
+        company: 'Nanay Estrella`s Restaurant',
+        address: 'W3M6+WFP, Clarin, Bohol',
+        zip: '123',
+        city: 'Bohol',
+        country: 'Philippines'
+        // "custom1": "custom value 1",
+        // "custom2": "custom value 2",
+        // "custom3": "custom value 3"
+      },
+      client: {
+        company: `${order.user.name}(${order.user.email})`,
+        address: order.address
+        // zip: '4567 CD',
+        // city: 'Clientcity',
+        // country: 'Clientcountry'
+        // "custom1": "custom value 1",
+        // "custom2": "custom value 2",
+        // "custom3": "custom value 3"
+      },
+      information: {
+        number: order.transactionId.slice(-6),
+        date: order.createdAt
+      },
+      products: data,
+      'bottom-notice': 'Thank You',
+      settings: {
+        currency: 'Php' // See documentation 'Locales and Currency' for more info. Leave empty for no currency.
+        // "locale": "nl-NL", // Defaults to en-US, used for number formatting (see docs)
+        // "margin-top": 25, // Default to 25
+        // "margin-right": 25, // Default to 25
+        // "margin-left": 25, // Default to 25
+        // "margin-bottom": 25, // Default to 25
+        // "format": "Letter", // Defaults to A4,
+        // "height": "1000px", // allowed units: mm, cm, in, px
+        // "width": "500px", // allowed units: mm, cm, in, px
+        // "orientation": "landscape", // portrait or landscape, defaults to portrait
+      },
+      // Used for translating the headers to your preferred language
+      // Defaults to English. Below example is translated to Dutch
+      translate: {
+        //     "invoice": "FACTUUR",
+        //     "number": "Nummer",
+        //     "date": "Datum",
+        //     "due-date": "Verloopdatum",
+        //     "subtotal": "Subtotaal",
+        //     "products": "Producten",
+        //     "quantity": "Aantal",
+        //     "price": "Prijs",
+        //     "product-total": "Totaal",
+        //     "total": "Totaal"
+        //		 "vat": "btw"
+      }
+    };
+  };
+
+  const downloadInvoice = async () => {
+    // See documentation for all data properties
+    const data = await getSampleData();
+
+    const result = await easyinvoice.createInvoice(data);
+    easyinvoice.print(result.pdf);
+    //	you can download like this as well:
+    //	easyinvoice.download();
+    //	easyinvoice.download('myInvoice.pdf');
+  };
   return (
     <Fragment>
       <tr className="border-b">
@@ -44,27 +130,27 @@ const TableBody = ({ order }) => {
           })}
         </td>
         <td className="hover:bg-gray-200 p-2 text-center cursor-default">
-          {order.status === "Not processed" && (
+          {order.status === 'Not processed' && (
             <span className="block text-red-600 rounded-full text-center text-xs px-2 font-semibold">
               {order.status}
             </span>
           )}
-          {order.status === "Processing" && (
+          {order.status === 'Processing' && (
             <span className="block text-yellow-600 rounded-full text-center text-xs px-2 font-semibold">
               {order.status}
             </span>
           )}
-          {order.status === "Shipped" && (
+          {order.status === 'Shipped' && (
             <span className="block text-blue-600 rounded-full text-center text-xs px-2 font-semibold">
               {order.status}
             </span>
           )}
-          {order.status === "Delivered" && (
+          {order.status === 'Delivered' && (
             <span className="block text-green-600 rounded-full text-center text-xs px-2 font-semibold">
               {order.status}
             </span>
           )}
-          {order.status === "Cancelled" && (
+          {order.status === 'Cancelled' && (
             <span className="block text-red-600 rounded-full text-center text-xs px-2 font-semibold">
               {order.status}
             </span>
@@ -79,10 +165,18 @@ const TableBody = ({ order }) => {
           {order.transactionId}
         </td>
         <td className="hover:bg-gray-200 p-2 text-center">
-          {moment(order.createdAt).format("lll")}
+          {moment(order.createdAt).format('lll')}
         </td>
         <td className="hover:bg-gray-200 p-2 text-center">
-          {moment(order.updatedAt).format("lll")}
+          {moment(order.updatedAt).format('lll')}
+        </td>
+        <td className="hover:bg-gray-200 p-2 text-center">
+          <button
+            onClick={downloadInvoice}
+            style={{ background: '#679641' }}
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Print
+          </button>
         </td>
       </tr>
     </Fragment>
@@ -106,14 +200,12 @@ const OrdersComponent = () => {
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+          xmlns="http://www.w3.org/2000/svg">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          ></path>
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
         </svg>
       </div>
     );
@@ -138,8 +230,7 @@ const OrdersComponent = () => {
                   <tr>
                     <td
                       colSpan="8"
-                      className="text-xl text-center font-semibold py-8"
-                    >
+                      className="text-xl text-center font-semibold py-8">
                       No order found
                     </td>
                   </tr>
@@ -156,7 +247,7 @@ const OrdersComponent = () => {
   );
 };
 
-const UserOrders = (props) => {
+const UserOrders = props => {
   return (
     <Fragment>
       <Layout children={<OrdersComponent />} />
